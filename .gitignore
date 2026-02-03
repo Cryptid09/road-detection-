@@ -36,6 +36,8 @@ ENV/
 # Logs and outputs
 logs/*.csv
 logs/*.log
+logs/images/*.jpg
+logs/images/*.png
 *.log
 test_output.txt
 run_output.txt

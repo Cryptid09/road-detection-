@@ -120,7 +120,8 @@ road_management/
 │   └── best_int8.tflite
 │
 ├── logs/                     # Detection logs (auto-created)
-│   └── detections.csv
+│   ├── detections.csv        # Detection log file
+│   └── images/               # Saved detection images (if enabled)
 │
 └── src/                      # Source modules
     ├── __init__.py
@@ -146,6 +147,8 @@ All settings are in `config.py`. Key parameters:
 | `CAMERA_INDEX` | USB webcam index | 0 | 0 |
 | `USE_PI_CAMERA` | Use Pi Camera (ribbon) | False | True/False |
 | `SHOW_DISPLAY` | Show display window | True | False |
+| `LOG_INCLUDE_IMAGE` | Save images with detections | True | True/False |
+| `LOG_IMAGES_DIR` | Directory for saved images | `logs/images` | `logs/images` |
 
 ## 📊 Output
 
@@ -160,6 +163,16 @@ All detections are automatically logged to `logs/detections.csv`:
 | class_id | 0 (pothole) or 1 (crack) |
 | confidence | Detection confidence (0.0-1.0) |
 | x1, y1, x2, y2 | Bounding box coordinates (pixels) |
+| image_path | Path to saved image (if image saving enabled) |
+
+### Saved Images
+
+When `LOG_INCLUDE_IMAGE = True` in `config.py`, images with detections are automatically saved to `logs/images/` with:
+- **Annotated frames**: Bounding boxes and labels drawn on images
+- **Unique filenames**: `detection_YYYYMMDD_HHMMSS_mmm.jpg` format
+- **CSV reference**: Image path included in CSV log for easy lookup
+
+**Note**: Image saving can use significant disk space. Monitor `logs/images/` directory size on Pi.
 
 ### Console Output
 

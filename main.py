@@ -158,9 +158,13 @@ def main():
     # Initialize event logger
     event_logger = EventLogger(
         log_dir=config.LOG_DIR,
-        filename=config.LOG_FILENAME
+        filename=config.LOG_FILENAME,
+        save_images=config.LOG_INCLUDE_IMAGE,
+        images_dir=config.LOG_IMAGES_DIR
     )
     print(f"Logging to: {event_logger.get_log_path()}")
+    if config.LOG_INCLUDE_IMAGE:
+        print(f"Images will be saved to: {config.LOG_IMAGES_DIR}")
     
     # Main loop
     frame_count = 0
@@ -182,10 +186,14 @@ def main():
             # Update FPS
             fps = fps_counter.update()
             
-            # Log detections
+            # Log detections (with image if enabled)
             if detections:
-                event_logger.log_detections(detections, config.CLASS_NAMES)
+                # Save annotated frame if image logging is enabled
+                frame_to_log = frame.copy() if config.LOG_INCLUDE_IMAGE else None
+                event_logger.log_detections(detections, config.CLASS_NAMES, frame_to_log)
                 print(f"Frame {frame_count}: Detected {len(detections)} anomalies")
+                if config.LOG_INCLUDE_IMAGE:
+                    print(f"  → Image saved to logs/images/")
             
             # Draw visualizations
             if config.SHOW_DISPLAY:
