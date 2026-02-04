@@ -95,7 +95,8 @@ def process_frame(frame, original_shape):
         detections,
         scale,
         pad,
-        original_shape
+        original_shape,
+        config.INPUT_SIZE
     )
     
     return pixel_detections

@@ -147,7 +147,8 @@ def parse_yolo_output(output: np.ndarray,
 def convert_to_pixel_coords(detections: List[Dict],
                            scale: float,
                            pad: Tuple[int, int],
-                           original_shape: Tuple[int, int]) -> List[Dict]:
+                           original_shape: Tuple[int, int],
+                           input_size: int = 640) -> List[Dict]:
     """
     Convert normalized coordinates to pixel coordinates
     
@@ -156,6 +157,7 @@ def convert_to_pixel_coords(detections: List[Dict],
         scale: Scale factor from preprocessing
         pad: (pad_x, pad_y) padding offsets
         original_shape: (height, width) of original image
+        input_size: Model input size (default: 640)
     
     Returns:
         List of detections with pixel coordinates
@@ -168,7 +170,8 @@ def convert_to_pixel_coords(detections: List[Dict],
             det['box'],
             scale,
             pad,
-            original_shape
+            original_shape,
+            input_size
         )
         
         pixel_detections.append({

@@ -103,7 +103,8 @@ def xywh_to_xyxy(box: np.ndarray) -> np.ndarray:
 def denormalize_coordinates(box: np.ndarray,
                            scale: float,
                            pad: Tuple[int, int],
-                           original_shape: Tuple[int, int]) -> np.ndarray:
+                           original_shape: Tuple[int, int],
+                           input_size: int = 640) -> np.ndarray:
     """
     Convert normalized coordinates back to original image coordinates
     
@@ -112,6 +113,7 @@ def denormalize_coordinates(box: np.ndarray,
         scale: Scale factor from letterboxing
         pad: (pad_x, pad_y) padding offsets
         original_shape: (height, width) of original image
+        input_size: Model input size (default: 640)
     
     Returns:
         Bounding box in original image pixel coordinates (x1, y1, x2, y2)
@@ -120,10 +122,10 @@ def denormalize_coordinates(box: np.ndarray,
     orig_h, orig_w = original_shape
     
     # Denormalize from [0, 1] to letterboxed image coordinates
-    x1 = box[0] * 640 - pad_x
-    y1 = box[1] * 640 - pad_y
-    x2 = box[2] * 640 - pad_x
-    y2 = box[3] * 640 - pad_y
+    x1 = box[0] * input_size - pad_x
+    y1 = box[1] * input_size - pad_y
+    x2 = box[2] * input_size - pad_x
+    y2 = box[3] * input_size - pad_y
     
     # Scale back to original image coordinates
     x1 = x1 / scale
