@@ -21,15 +21,15 @@ from src.fps_counter import FPSCounter
 from src.event_logger import EventLogger
 from src.visualization import draw_detections, draw_fps
 
-# Import inference engines
-if config.MODEL_TYPE == "onnx":
-    from src.inference_onnx import ONNXInferenceEngine
-    inference_engine = None
-elif config.MODEL_TYPE == "tflite":
-    from src.inference_tflite import TFLiteInferenceEngine
-    inference_engine = None
-else:
+# Import both inference engines (for fallback support)
+from src.inference_onnx import ONNXInferenceEngine
+from src.inference_tflite import TFLiteInferenceEngine
+
+# Validate MODEL_TYPE
+if config.MODEL_TYPE not in ["onnx", "tflite"]:
     raise ValueError(f"Unsupported MODEL_TYPE: {config.MODEL_TYPE}")
+
+inference_engine = None
 
 
 def initialize_model():
@@ -42,7 +42,6 @@ def initialize_model():
             print(f"Warning: ONNX model not found at {model_path}")
             print("Falling back to TFLite model...")
             if os.path.exists(config.MODEL_PATH_TFLITE):
-                from src.inference_tflite import TFLiteInferenceEngine
                 inference_engine = TFLiteInferenceEngine(config.MODEL_PATH_TFLITE)
                 return
             else:
@@ -55,7 +54,6 @@ def initialize_model():
             print(f"Warning: TFLite model not found at {model_path}")
             print("Falling back to ONNX model...")
             if os.path.exists(config.MODEL_PATH_ONNX):
-                from src.inference_onnx import ONNXInferenceEngine
                 inference_engine = ONNXInferenceEngine(config.MODEL_PATH_ONNX)
                 return
             else:
