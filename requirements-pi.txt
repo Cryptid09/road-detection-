@@ -1,9 +1,14 @@
-# Requirements for Raspberry Pi
+# Requirements for Raspberry Pi (32-bit armv7l)
 # Install with: pip install -r requirements-pi.txt
+#
+# Note: onnxruntime is NOT included as it doesn't support 32-bit ARM
+# This system uses TFLite for inference on Raspberry Pi
 
-opencv-python>=4.8.0
-onnxruntime>=1.16.0
 numpy>=1.24.0
 tflite-runtime>=2.14.0
 picamera2>=0.3.12
+
+# OpenCV - install via apt instead of pip for better Pi support:
+# sudo apt install python3-opencv
+# Then create venv with: python3 -m venv --system-site-packages venv
 

@@ -47,18 +47,25 @@ pip install --upgrade pip
 
 ### 3. Install Dependencies
 
-**On Raspberry Pi:**
+**On Raspberry Pi (32-bit armv7l):**
 ```bash
-pip install opencv-python>=4.8.0 onnxruntime>=1.16.0 numpy>=1.24.0
-pip install tflite-runtime>=2.14.0
-pip install picamera2  # Optional, for Pi Camera
+# Install system OpenCV first
+sudo apt install python3-opencv
+
+# Create venv with system packages
+python3 -m venv --system-site-packages venv
+source venv/bin/activate
+
+# Install Pi-specific dependencies
+pip install -r requirements-pi.txt
 ```
 
 **On Laptop/Desktop (Development):**
 ```bash
-pip install opencv-python>=4.8.0 onnxruntime>=1.16.0 numpy>=1.24.0
-pip install tensorflow>=2.14.0  # Includes tensorflow.lite
+pip install -r requirements.txt
 ```
+
+**Note**: Pi deployment uses TFLite only (ONNX Runtime doesn't support 32-bit ARM).
 
 ### 4. Add Model Files
 

@@ -21,9 +21,17 @@ from src.fps_counter import FPSCounter
 from src.event_logger import EventLogger
 from src.visualization import draw_detections, draw_fps
 
-# Import both inference engines (for fallback support)
-from src.inference_onnx import ONNXInferenceEngine
+# Import TFLite inference engine (primary)
 from src.inference_tflite import TFLiteInferenceEngine
+
+# Import ONNX inference engine (optional - may not be available on Pi)
+try:
+    from src.inference_onnx import ONNXInferenceEngine
+    ONNX_AVAILABLE = True
+except ImportError:
+    ONNXInferenceEngine = None
+    ONNX_AVAILABLE = False
+    print("Warning: ONNX Runtime not available. Using TFLite only.")
 
 # Validate MODEL_TYPE
 if config.MODEL_TYPE not in ["onnx", "tflite"]:
@@ -37,12 +45,23 @@ def initialize_model():
     global inference_engine
     
     if config.MODEL_TYPE == "onnx":
+        if not ONNX_AVAILABLE:
+            print("ERROR: ONNX Runtime not available on this system")
+            print("Falling back to TFLite model...")
+            if os.path.exists(config.MODEL_PATH_TFLITE):
+                inference_engine = TFLiteInferenceEngine(config.MODEL_PATH_TFLITE)
+                print("Model initialized: TFLite (fallback)")
+                return
+            else:
+                raise RuntimeError("ONNX not available and TFLite model not found")
+        
         model_path = config.MODEL_PATH_ONNX
         if not os.path.exists(model_path):
             print(f"Warning: ONNX model not found at {model_path}")
             print("Falling back to TFLite model...")
             if os.path.exists(config.MODEL_PATH_TFLITE):
                 inference_engine = TFLiteInferenceEngine(config.MODEL_PATH_TFLITE)
+                print("Model initialized: TFLite (fallback)")
                 return
             else:
                 raise FileNotFoundError(f"Model not found: {model_path}")
@@ -52,9 +71,10 @@ def initialize_model():
         model_path = config.MODEL_PATH_TFLITE
         if not os.path.exists(model_path):
             print(f"Warning: TFLite model not found at {model_path}")
-            print("Falling back to ONNX model...")
-            if os.path.exists(config.MODEL_PATH_ONNX):
+            if ONNX_AVAILABLE and os.path.exists(config.MODEL_PATH_ONNX):
+                print("Falling back to ONNX model...")
                 inference_engine = ONNXInferenceEngine(config.MODEL_PATH_ONNX)
+                print("Model initialized: ONNX (fallback)")
                 return
             else:
                 raise FileNotFoundError(f"Model not found: {model_path}")

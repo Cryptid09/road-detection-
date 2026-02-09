@@ -70,8 +70,8 @@ scp -r /path/to/road_management pi@<pi-ip>:/home/pi/
 ```bash
 cd ~/road_management
 
-# Create virtual environment
-python3 -m venv venv
+# Create virtual environment WITH system site packages (for OpenCV)
+python3 -m venv --system-site-packages venv
 
 # Activate virtual environment
 source venv/bin/activate
@@ -86,17 +86,16 @@ pip install --upgrade pip
 # Make sure venv is activated (you should see (venv) in prompt)
 source venv/bin/activate
 
-# Install core dependencies
-pip install opencv-python>=4.8.0
-pip install onnxruntime>=1.16.0
-pip install numpy>=1.24.0
+# Install from Pi-specific requirements
+pip install -r requirements-pi.txt
 
-# Install TFLite runtime (lightweight, Pi-optimized)
-pip install tflite-runtime>=2.14.0
-
-# Optional: Install Pi Camera support
-pip install picamera2
+# Verify installation
+python -c "import cv2; print('OpenCV:', cv2.__version__)"
+python -c "import tflite_runtime; print('TFLite: OK')"
+python -c "import numpy; print('NumPy:', numpy.__version__)"
 ```
+
+**Note**: This installation uses TFLite for inference (optimized for Pi). ONNX Runtime is NOT used as it doesn't support 32-bit ARM (armv7l).
 
 **Note**: If `tflite-runtime` installation fails, you can use TensorFlow instead:
 ```bash
