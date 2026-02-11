@@ -94,8 +94,9 @@ def process_frame(frame, original_shape):
     Returns:
         List of detections with pixel coordinates
     """
-    # Preprocess
-    preprocessed, scale, pad = preprocess_for_inference(frame, config.INPUT_SIZE)
+    # Preprocess - use CHW for ONNX, HWC for TFLite
+    use_chw = config.MODEL_TYPE == "onnx"
+    preprocessed, scale, pad = preprocess_for_inference(frame, config.INPUT_SIZE, use_chw=use_chw)
     
     # Run inference
     raw_output = inference_engine.predict(preprocessed)

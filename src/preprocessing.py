@@ -49,17 +49,20 @@ def letterbox_image(img: np.ndarray,
 
 
 def preprocess_for_inference(img: np.ndarray, 
-                            target_size: int = 640) -> Tuple[np.ndarray, float, Tuple[int, int]]:
+                            target_size: int = 640,
+                            use_chw: bool = False) -> Tuple[np.ndarray, float, Tuple[int, int]]:
     """
     Preprocess image for model inference
     
     Args:
         img: Input BGR image (H, W, 3)
         target_size: Target input size for model
+        use_chw: If True, output CHW format (1, 3, H, W) for ONNX
+                 If False, output HWC format (1, H, W, 3) for TFLite
     
     Returns:
         Tuple of (preprocessed_image, scale, (pad_x, pad_y))
-        - preprocessed_image: Normalized RGB image (1, 3, H, W) in [0, 1] range
+        - preprocessed_image: Normalized RGB image in [0, 1] range
         - scale: Scale factor for coordinate conversion
         - (pad_x, pad_y): Padding offsets for coordinate conversion
     """
@@ -72,12 +75,16 @@ def preprocess_for_inference(img: np.ndarray,
     # Normalize to [0, 1]
     normalized = rgb_img.astype(np.float32) / 255.0
     
-    # Convert to CHW format (Channel, Height, Width)
-    # Shape: (H, W, 3) -> (3, H, W)
-    chw_img = np.transpose(normalized, (2, 0, 1))
-    
-    # Add batch dimension: (3, H, W) -> (1, 3, H, W)
-    batched = np.expand_dims(chw_img, axis=0)
+    if use_chw:
+        # Convert to CHW format for ONNX (Channel, Height, Width)
+        # Shape: (H, W, 3) -> (3, H, W)
+        chw_img = np.transpose(normalized, (2, 0, 1))
+        # Add batch dimension: (3, H, W) -> (1, 3, H, W)
+        batched = np.expand_dims(chw_img, axis=0)
+    else:
+        # Keep HWC format for TFLite (Height, Width, Channel)
+        # Add batch dimension: (H, W, 3) -> (1, H, W, 3)
+        batched = np.expand_dims(normalized, axis=0)
     
     return batched, scale, (pad_x, pad_y)
 
