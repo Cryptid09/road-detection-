@@ -59,7 +59,22 @@ class Camera:
     
     def _init_usb_camera(self):
         """Initialize USB webcam using OpenCV"""
-        self.cap = cv2.VideoCapture(self.camera_index)
+        # Try different backends in order of preference
+        backends = [
+            cv2.CAP_V4L2,      # V4L2 (Linux)
+            cv2.CAP_ANY,       # Auto-detect
+        ]
+        
+        for backend in backends:
+            self.cap = cv2.VideoCapture(self.camera_index, backend)
+            if self.cap.isOpened():
+                # Try to read a test frame
+                ret, test_frame = self.cap.read()
+                if ret:
+                    backend_name = {cv2.CAP_V4L2: "V4L2", cv2.CAP_ANY: "AUTO"}
+                    print(f"Using backend: {backend_name.get(backend, 'Unknown')}")
+                    break
+                self.cap.release()
         
         if not self.cap.isOpened():
             raise RuntimeError(f"Failed to open camera at index {self.camera_index}")
@@ -68,6 +83,9 @@ class Camera:
         self.cap.set(cv2.CAP_PROP_FRAME_WIDTH, self.width)
         self.cap.set(cv2.CAP_PROP_FRAME_HEIGHT, self.height)
         self.cap.set(cv2.CAP_PROP_FPS, self.fps)
+        
+        # Set buffer size to 1 to get latest frame
+        self.cap.set(cv2.CAP_PROP_BUFFERSIZE, 1)
         
         # Verify actual resolution
         actual_width = int(self.cap.get(cv2.CAP_PROP_FRAME_WIDTH))
@@ -78,15 +96,34 @@ class Camera:
         """Initialize Raspberry Pi Camera using picamera2"""
         self.picam2 = Picamera2()
         
-        # Configure camera
+        # Configure camera for video streaming
+        # Using YUV420 is more efficient than RGB888 for video
         config = self.picam2.create_video_configuration(
             main={"size": (self.width, self.height), "format": "RGB888"},
-            controls={"FrameRate": self.fps}
+            buffer_count=2  # Use 2 buffers for better performance
         )
         self.picam2.configure(config)
+        
+        # Set controls for better inference performance
+        self.picam2.set_controls({
+            "FrameRate": self.fps,
+            "ExposureTime": 20000,  # Auto-adjust exposure
+            "AnalogueGain": 1.0     # Auto-adjust gain
+        })
+        
         self.picam2.start()
         
-        print(f"Pi Camera initialized: {self.width}x{self.height}")
+        # Warmup: Let camera stabilize (important for auto-exposure/gain)
+        import time
+        time.sleep(2)
+        # Capture and discard a few frames
+        for _ in range(5):
+            try:
+                self.picam2.capture_array()
+            except:
+                pass
+        
+        print(f"Pi Camera initialized: {self.width}x{self.height} @ {self.fps}fps")
     
     def read(self) -> Tuple[bool, Optional[np.ndarray]]:
         """

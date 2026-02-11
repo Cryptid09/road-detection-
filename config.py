@@ -17,7 +17,7 @@ NMS_THRESHOLD = 0.45  # Non-Maximum Suppression threshold
 
 # Camera Configuration
 CAMERA_INDEX = 0  # USB webcam index (try 0, 1, 2, etc.)
-USE_PI_CAMERA = False  # Set to True on Raspberry Pi with ribbon camera
+USE_PI_CAMERA = True  # Set to True on Raspberry Pi with ribbon camera
 CAMERA_WIDTH = 640
 CAMERA_HEIGHT = 480
 CAMERA_FPS = 30

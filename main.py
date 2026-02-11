@@ -187,6 +187,8 @@ def main():
     
     # Main loop
     frame_count = 0
+    consecutive_failures = 0
+    max_failures = 5
     print("\nStarting inference loop... (Press 'q' to quit)")
     
     try:
@@ -194,9 +196,14 @@ def main():
             # Read frame
             ret, frame = camera.read()
             if not ret:
-                print("Failed to read frame from camera")
-                break
+                consecutive_failures += 1
+                if consecutive_failures >= max_failures:
+                    print(f"Failed to read frame from camera ({consecutive_failures} consecutive failures)")
+                    break
+                continue
             
+            # Reset failure counter on successful read
+            consecutive_failures = 0
             original_shape = frame.shape[:2]  # (height, width)
             
             # Process frame
