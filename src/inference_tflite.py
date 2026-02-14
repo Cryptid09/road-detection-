@@ -71,7 +71,9 @@ class TFLiteInferenceEngine:
         Run inference on preprocessed image
         
         Args:
-            preprocessed_img: Preprocessed image (1, 3, H, W) in [0, 1] range
+            preprocessed_img: Preprocessed image
+                - For INT8 quantized: (1, H, W, 3) uint8 in [0, 255] range
+                - For float32: (1, H, W, 3) or (1, 3, H, W) float32 in [0, 1] range
         
         Returns:
             Raw model output (1, 6, 8400) where columns are:
@@ -79,13 +81,22 @@ class TFLiteInferenceEngine:
         """
         # Handle quantization if needed
         if self.is_quantized:
-            # Convert float32 [0, 1] to quantized int8
-            input_scale, input_zero_point = self.input_details[0]['quantization']
-            quantized_input = (preprocessed_img / input_scale + input_zero_point).astype(
-                self.input_details[0]['dtype']
-            )
+            # For INT8 quantized models, input should already be uint8 [0, 255]
+            # If it's float [0, 1], convert to uint8 [0, 255]
+            if preprocessed_img.dtype == np.float32:
+                quantized_input = (preprocessed_img * 255).astype(np.uint8)
+            else:
+                quantized_input = preprocessed_img.astype(self.input_details[0]['dtype'])
         else:
             quantized_input = preprocessed_img.astype(np.float32)
+        
+        # Ensure correct shape based on model input
+        expected_shape = tuple(self.input_shape)
+        if quantized_input.shape != expected_shape:
+            # Handle CHW to HWC conversion if needed
+            if len(quantized_input.shape) == 4 and quantized_input.shape[1] == 3:
+                # Input is (1, 3, H, W), convert to (1, H, W, 3)
+                quantized_input = np.transpose(quantized_input, (0, 2, 3, 1))
         
         # Set input tensor
         self.interpreter.set_tensor(self.input_index, quantized_input)

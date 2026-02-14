@@ -96,7 +96,15 @@ def process_frame(frame, original_shape):
     """
     # Preprocess - use CHW for ONNX, HWC for TFLite
     use_chw = config.MODEL_TYPE == "onnx"
-    preprocessed, scale, pad = preprocess_for_inference(frame, config.INPUT_SIZE, use_chw=use_chw)
+    # Use quantized=True for TFLite INT8 models, False for ONNX/float models
+    is_quantized = config.MODEL_TYPE == "tflite" and inference_engine.is_quantized
+    
+    preprocessed, scale, pad = preprocess_for_inference(
+        frame, 
+        config.INPUT_SIZE, 
+        use_chw=use_chw,
+        quantized=is_quantized
+    )
     
     # Run inference
     raw_output = inference_engine.predict(preprocessed)

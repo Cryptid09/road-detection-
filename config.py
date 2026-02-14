@@ -11,8 +11,8 @@ MODEL_PATH_ONNX = os.path.join("model", "best.onnx")
 MODEL_PATH_TFLITE = os.path.join("model", "best_int8.tflite")
 
 # Detection Parameters
-CONFIDENCE_THRESHOLD = 0.6
-INPUT_SIZE = 640  # Model input size (tested at 640, can use 320/416 for Pi)
+CONFIDENCE_THRESHOLD = 0.5  # Lowered for better detection
+INPUT_SIZE = 320  # Reduced for better FPS on Pi (was 640)
 NMS_THRESHOLD = 0.45  # Non-Maximum Suppression threshold
 
 # Camera Configuration
@@ -20,7 +20,7 @@ CAMERA_INDEX = 0  # USB webcam index (try 0, 1, 2, etc.)
 USE_PI_CAMERA = True  # Set to True on Raspberry Pi with ribbon camera
 CAMERA_WIDTH = 640
 CAMERA_HEIGHT = 480
-CAMERA_FPS = 30
+CAMERA_FPS = 15  # Reduced from 30 to reduce processing overhead
 
 # Performance Targets
 FPS_TARGET = 5  # Minimum FPS target
