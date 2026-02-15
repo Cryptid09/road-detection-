@@ -229,7 +229,12 @@ def main():
             # Log detections (with image if enabled in config)
             if detections:
                 # Save annotated frame if image logging is enabled
-                frame_to_log = frame.copy() if config.LOG_INCLUDE_IMAGE else None
+                # Convert RGB to BGR for logging (event_logger expects BGR)
+                frame_to_log = None
+                if config.LOG_INCLUDE_IMAGE:
+                    frame_to_log = frame.copy()
+                    if is_rgb:
+                        frame_to_log = cv2.cvtColor(frame_to_log, cv2.COLOR_RGB2BGR)
                 event_logger.log_detections(detections, config.CLASS_NAMES, frame_to_log)
                 print(f"Frame {frame_count}: Detected {len(detections)} anomalies")
                 if config.LOG_INCLUDE_IMAGE:
@@ -237,8 +242,13 @@ def main():
             
             # Draw visualizations
             if config.SHOW_DISPLAY:
+                # Convert RGB to BGR for display (Pi Camera outputs RGB, USB outputs BGR)
+                display_frame = frame.copy()
+                if is_rgb:
+                    display_frame = cv2.cvtColor(display_frame, cv2.COLOR_RGB2BGR)
+                
                 # Draw detections
-                vis_frame = draw_detections(frame, detections, config.CLASS_NAMES)
+                vis_frame = draw_detections(display_frame, detections, config.CLASS_NAMES)
                 
                 # Draw FPS
                 vis_frame = draw_fps(vis_frame, fps)

@@ -97,18 +97,22 @@ class Camera:
         self.picam2 = Picamera2()
         
         # Configure camera for video streaming
+        # Use more buffers for better performance (allows frame skipping)
         config = self.picam2.create_video_configuration(
             main={"size": (self.width, self.height), "format": "RGB888"},
-            buffer_count=1  # Use 1 buffer to reduce latency
+            buffer_count=3  # Increased buffers for better FPS (allows frame skipping)
         )
         self.picam2.configure(config)
         
-        # Set controls for better inference performance
+        # Use auto exposure and gain for proper brightness (like rpicam-hello)
+        # Remove fixed exposure/gain to allow auto-adjustment
         self.picam2.set_controls({
             "FrameRate": self.fps,
-            "ExposureTime": 20000,  # Fixed exposure for consistent color
-            "AnalogueGain": 1.0,     # Fixed gain for consistent color
-            "AwbEnable": True        # Enable auto white balance for correct colors
+            # Let auto exposure and gain handle brightness automatically
+            # This matches rpicam-hello behavior and provides proper color profile
+            "AwbEnable": True,        # Enable auto white balance for correct colors
+            "AeEnable": True          # Enable auto exposure for proper brightness
+            # Don't set AnalogueGain or ExposureTime - let auto controls handle it
         })
         
         self.picam2.start()
@@ -116,7 +120,7 @@ class Camera:
         # Warmup: Let camera stabilize (important for auto-exposure/gain)
         import time
         time.sleep(2)
-        # Capture and discard a few frames
+        # Capture and discard a few frames to let auto controls stabilize
         for _ in range(5):
             try:
                 self.picam2.capture_array()
@@ -150,10 +154,13 @@ class Camera:
     def _read_pi_camera(self) -> Tuple[bool, Optional[np.ndarray]]:
         """Read frame from Pi Camera"""
         try:
+            # capture_array() is blocking, but with increased buffer_count
+            # the camera can capture ahead, reducing wait time
+            # The increased buffers allow the camera to work ahead while we process
+            frame_rgb = self.picam2.capture_array()
+            
             # picamera2 returns RGB directly - keep it as RGB to avoid double conversion
             # The preprocessing module will handle it correctly
-            frame_rgb = self.picam2.capture_array()
-            # Return RGB directly (not BGR) since preprocessing expects input and converts appropriately
             return True, frame_rgb
         except Exception as e:
             print(f"Error reading from Pi Camera: {e}")
