@@ -12,7 +12,7 @@ MODEL_PATH_TFLITE = os.path.join("model", "best_int8.tflite")
 
 # Detection Parameters
 CONFIDENCE_THRESHOLD = 0.5  # Lowered for better detection
-INPUT_SIZE = 320  # Reduced for better FPS on Pi (was 640)
+INPUT_SIZE = 640  # Must match model training size
 NMS_THRESHOLD = 0.45  # Non-Maximum Suppression threshold
 
 # Camera Configuration
