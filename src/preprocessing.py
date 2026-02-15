@@ -51,7 +51,7 @@ def letterbox_image(img: np.ndarray,
 def preprocess_for_inference(img: np.ndarray, 
                             target_size: int = 640,
                             use_chw: bool = False,
-                            quantized: bool = True,
+                            quantized: bool = False,
                             is_bgr: bool = True) -> Tuple[np.ndarray, float, Tuple[int, int]]:
     """
     Preprocess image for model inference
@@ -82,26 +82,18 @@ def preprocess_for_inference(img: np.ndarray,
     
     if quantized:
         # For INT8 quantized models, keep as uint8 [0, 255]
-        if use_chw:
-            # Convert to CHW format: (H, W, 3) -> (3, H, W)
-            chw_img = np.transpose(rgb_img, (2, 0, 1))
-            batched = np.expand_dims(chw_img, axis=0)
-        else:
-            # Keep HWC format: (H, W, 3) -> (1, H, W, 3)
-            batched = np.expand_dims(rgb_img, axis=0)
+        # TFLite INT8 models use HWC format
+        batched = np.expand_dims(rgb_img, axis=0)
     else:
         # For float32 models, normalize to [0, 1]
         normalized = rgb_img.astype(np.float32) / 255.0
         
         if use_chw:
             # Convert to CHW format for ONNX (Channel, Height, Width)
-            # Shape: (H, W, 3) -> (3, H, W)
             chw_img = np.transpose(normalized, (2, 0, 1))
-            # Add batch dimension: (3, H, W) -> (1, 3, H, W)
             batched = np.expand_dims(chw_img, axis=0)
         else:
-            # Keep HWC format for TFLite (Height, Width, Channel)
-            # Add batch dimension: (H, W, 3) -> (1, H, W, 3)
+            # Keep HWC format for TFLite
             batched = np.expand_dims(normalized, axis=0)
     
     return batched, scale, (pad_x, pad_y)

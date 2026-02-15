@@ -97,8 +97,10 @@ def process_frame(frame, original_shape, is_rgb=False):
     """
     # Preprocess - use CHW for ONNX, HWC for TFLite
     use_chw = config.MODEL_TYPE == "onnx"
-    # Use quantized=True for TFLite INT8 models, False for ONNX/float models
-    is_quantized = config.MODEL_TYPE == "tflite" and inference_engine.is_quantized
+    # Check if model is actually INT8 quantized
+    is_quantized = (config.MODEL_TYPE == "tflite" and 
+                   hasattr(inference_engine, 'is_quantized') and 
+                   inference_engine.is_quantized)
     
     preprocessed, scale, pad = preprocess_for_inference(
         frame, 
@@ -224,11 +226,14 @@ def main():
             # Update FPS
             fps = fps_counter.update()
             
-            # Log detections (without image for better performance)
+            # Log detections (with image if enabled in config)
             if detections:
-                # Don't save images during real-time inference for better FPS
-                event_logger.log_detections(detections, config.CLASS_NAMES, frame_to_save=None)
+                # Save annotated frame if image logging is enabled
+                frame_to_log = frame.copy() if config.LOG_INCLUDE_IMAGE else None
+                event_logger.log_detections(detections, config.CLASS_NAMES, frame_to_log)
                 print(f"Frame {frame_count}: Detected {len(detections)} anomalies")
+                if config.LOG_INCLUDE_IMAGE:
+                    print(f"  → Image saved to {config.LOG_IMAGES_DIR}/")
             
             # Draw visualizations
             if config.SHOW_DISPLAY:

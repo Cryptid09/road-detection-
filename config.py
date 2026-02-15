@@ -8,7 +8,7 @@ import os
 # Model Configuration
 MODEL_TYPE = "tflite"  # Options: "onnx" or "tflite"
 MODEL_PATH_ONNX = os.path.join("model", "best.onnx")
-MODEL_PATH_TFLITE = os.path.join("model", "best_int8.tflite")
+MODEL_PATH_TFLITE = os.path.join("model", "best_int8.tflite")  # Upload new INT8 quantized model from Kaggle
 
 # Detection Parameters
 CONFIDENCE_THRESHOLD = 0.5  # Lowered for better detection
@@ -35,7 +35,7 @@ CLASS_NAMES = {
 # Logging Configuration
 LOG_DIR = "logs"
 LOG_FILENAME = "detections.csv"
-LOG_INCLUDE_IMAGE = False  # Set to True to save images (reduces FPS significantly)
+LOG_INCLUDE_IMAGE = True  # Save images with detections (important for documentation)
 LOG_IMAGES_DIR = os.path.join(LOG_DIR, "images")  # Directory for saved images
 
 # Display Configuration

@@ -73,33 +73,14 @@ class TFLiteInferenceEngine:
         Args:
             preprocessed_img: Preprocessed image
                 - For INT8 quantized: (1, H, W, 3) uint8 in [0, 255] range
-                - For float32: (1, H, W, 3) or (1, 3, H, W) float32 in [0, 1] range
+                - For float32: (1, H, W, 3) float32 in [0, 1] range
         
         Returns:
             Raw model output (1, 6, 8400) where columns are:
             [cx, cy, w, h, unused (~0), score] (all normalized)
         """
-        # Handle quantization if needed
-        if self.is_quantized:
-            # For INT8 quantized models, input should already be uint8 [0, 255]
-            # If it's float [0, 1], convert to uint8 [0, 255]
-            if preprocessed_img.dtype == np.float32:
-                quantized_input = (preprocessed_img * 255).astype(np.uint8)
-            else:
-                quantized_input = preprocessed_img.astype(self.input_details[0]['dtype'])
-        else:
-            quantized_input = preprocessed_img.astype(np.float32)
-        
-        # Ensure correct shape based on model input
-        expected_shape = tuple(self.input_shape)
-        if quantized_input.shape != expected_shape:
-            # Handle CHW to HWC conversion if needed
-            if len(quantized_input.shape) == 4 and quantized_input.shape[1] == 3:
-                # Input is (1, 3, H, W), convert to (1, H, W, 3)
-                quantized_input = np.transpose(quantized_input, (0, 2, 3, 1))
-        
         # Set input tensor
-        self.interpreter.set_tensor(self.input_index, quantized_input)
+        self.interpreter.set_tensor(self.input_index, preprocessed_img)
         
         # Run inference
         self.interpreter.invoke()
@@ -107,7 +88,7 @@ class TFLiteInferenceEngine:
         # Get output
         output = self.interpreter.get_tensor(self.output_index)
         
-        # Handle dequantization if needed
+        # Handle dequantization if needed (for INT8 models)
         if self.output_details[0]['dtype'] != np.float32:
             output_scale, output_zero_point = self.output_details[0]['quantization']
             output = (output.astype(np.float32) - output_zero_point) * output_scale
