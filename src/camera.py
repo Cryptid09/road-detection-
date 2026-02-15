@@ -97,18 +97,18 @@ class Camera:
         self.picam2 = Picamera2()
         
         # Configure camera for video streaming
-        # Using YUV420 is more efficient than RGB888 for video
         config = self.picam2.create_video_configuration(
             main={"size": (self.width, self.height), "format": "RGB888"},
-            buffer_count=2  # Use 2 buffers for better performance
+            buffer_count=1  # Use 1 buffer to reduce latency
         )
         self.picam2.configure(config)
         
         # Set controls for better inference performance
         self.picam2.set_controls({
             "FrameRate": self.fps,
-            "ExposureTime": 20000,  # Auto-adjust exposure
-            "AnalogueGain": 1.0     # Auto-adjust gain
+            "ExposureTime": 20000,  # Fixed exposure for consistent color
+            "AnalogueGain": 1.0,     # Fixed gain for consistent color
+            "AwbEnable": True        # Enable auto white balance for correct colors
         })
         
         self.picam2.start()
@@ -150,10 +150,11 @@ class Camera:
     def _read_pi_camera(self) -> Tuple[bool, Optional[np.ndarray]]:
         """Read frame from Pi Camera"""
         try:
-            # picamera2 returns RGB, convert to BGR for OpenCV compatibility
+            # picamera2 returns RGB directly - keep it as RGB to avoid double conversion
+            # The preprocessing module will handle it correctly
             frame_rgb = self.picam2.capture_array()
-            frame_bgr = cv2.cvtColor(frame_rgb, cv2.COLOR_RGB2BGR)
-            return True, frame_bgr
+            # Return RGB directly (not BGR) since preprocessing expects input and converts appropriately
+            return True, frame_rgb
         except Exception as e:
             print(f"Error reading from Pi Camera: {e}")
             return False, None

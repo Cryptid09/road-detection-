@@ -83,13 +83,14 @@ def initialize_model():
     print(f"Model initialized: {config.MODEL_TYPE}")
 
 
-def process_frame(frame, original_shape):
+def process_frame(frame, original_shape, is_rgb=False):
     """
     Process a single frame through the inference pipeline
     
     Args:
-        frame: Input BGR image
+        frame: Input image (BGR from USB camera, RGB from Pi camera)
         original_shape: (height, width) of original frame
+        is_rgb: True if frame is RGB (Pi Camera), False if BGR (USB camera)
     
     Returns:
         List of detections with pixel coordinates
@@ -103,7 +104,8 @@ def process_frame(frame, original_shape):
         frame, 
         config.INPUT_SIZE, 
         use_chw=use_chw,
-        quantized=is_quantized
+        quantized=is_quantized,
+        is_bgr=not is_rgb
     )
     
     # Run inference
@@ -215,20 +217,18 @@ def main():
             consecutive_failures = 0
             original_shape = frame.shape[:2]  # (height, width)
             
-            # Process frame
-            detections = process_frame(frame, original_shape)
+            # Process frame (Pi Camera outputs RGB, USB camera outputs BGR)
+            is_rgb = config.USE_PI_CAMERA
+            detections = process_frame(frame, original_shape, is_rgb=is_rgb)
             
             # Update FPS
             fps = fps_counter.update()
             
-            # Log detections (with image if enabled)
+            # Log detections (without image for better performance)
             if detections:
-                # Save annotated frame if image logging is enabled
-                frame_to_log = frame.copy() if config.LOG_INCLUDE_IMAGE else None
-                event_logger.log_detections(detections, config.CLASS_NAMES, frame_to_log)
+                # Don't save images during real-time inference for better FPS
+                event_logger.log_detections(detections, config.CLASS_NAMES, frame_to_save=None)
                 print(f"Frame {frame_count}: Detected {len(detections)} anomalies")
-                if config.LOG_INCLUDE_IMAGE:
-                    print(f"  → Image saved to logs/images/")
             
             # Draw visualizations
             if config.SHOW_DISPLAY:

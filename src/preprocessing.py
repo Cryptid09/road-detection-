@@ -51,17 +51,19 @@ def letterbox_image(img: np.ndarray,
 def preprocess_for_inference(img: np.ndarray, 
                             target_size: int = 640,
                             use_chw: bool = False,
-                            quantized: bool = True) -> Tuple[np.ndarray, float, Tuple[int, int]]:
+                            quantized: bool = True,
+                            is_bgr: bool = True) -> Tuple[np.ndarray, float, Tuple[int, int]]:
     """
     Preprocess image for model inference
     
     Args:
-        img: Input BGR image (H, W, 3)
+        img: Input image (H, W, 3) - BGR or RGB depending on is_bgr
         target_size: Target input size for model
         use_chw: If True, output CHW format (1, 3, H, W) for ONNX
                  If False, output HWC format (1, H, W, 3) for TFLite
         quantized: If True, output uint8 [0, 255] for INT8 models
                    If False, output float32 [0, 1]
+        is_bgr: If True, convert BGR to RGB. If False, assume already RGB
     
     Returns:
         Tuple of (preprocessed_image, scale, (pad_x, pad_y))
@@ -72,8 +74,11 @@ def preprocess_for_inference(img: np.ndarray,
     # Letterbox image
     letterboxed, scale, (pad_x, pad_y) = letterbox_image(img, target_size)
     
-    # Convert BGR to RGB
-    rgb_img = cv2.cvtColor(letterboxed, cv2.COLOR_BGR2RGB)
+    # Convert BGR to RGB if needed
+    if is_bgr:
+        rgb_img = cv2.cvtColor(letterboxed, cv2.COLOR_BGR2RGB)
+    else:
+        rgb_img = letterboxed  # Already RGB
     
     if quantized:
         # For INT8 quantized models, keep as uint8 [0, 255]

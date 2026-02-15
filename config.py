@@ -35,7 +35,7 @@ CLASS_NAMES = {
 # Logging Configuration
 LOG_DIR = "logs"
 LOG_FILENAME = "detections.csv"
-LOG_INCLUDE_IMAGE = True  # Set to True to save images with detections
+LOG_INCLUDE_IMAGE = False  # Set to True to save images (reduces FPS significantly)
 LOG_IMAGES_DIR = os.path.join(LOG_DIR, "images")  # Directory for saved images
 
 # Display Configuration
