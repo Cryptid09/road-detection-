@@ -9,6 +9,7 @@ import numpy as np
 import sys
 import os
 import argparse
+import time
 
 # Add src to path
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
@@ -83,7 +84,7 @@ def initialize_model():
     print(f"Model initialized: {config.MODEL_TYPE}")
 
 
-def process_frame(frame, original_shape, is_rgb=False):
+def process_frame(frame, original_shape, is_rgb=False, profile=False):
     """
     Process a single frame through the inference pipeline
     
@@ -91,10 +92,13 @@ def process_frame(frame, original_shape, is_rgb=False):
         frame: Input image (BGR from USB camera, RGB from Pi camera)
         original_shape: (height, width) of original frame
         is_rgb: True if frame is RGB (Pi Camera), False if BGR (USB camera)
+        profile: If True, return timing information
     
     Returns:
-        List of detections with pixel coordinates
+        List of detections with pixel coordinates (or tuple with timings if profile=True)
     """
+    timings = {}
+    
     # Preprocess - use CHW for ONNX, HWC for TFLite
     use_chw = config.MODEL_TYPE == "onnx"
     # Check if model is actually INT8 quantized
@@ -102,6 +106,7 @@ def process_frame(frame, original_shape, is_rgb=False):
                    hasattr(inference_engine, 'is_quantized') and 
                    inference_engine.is_quantized)
     
+    t0 = time.time()
     preprocessed, scale, pad = preprocess_for_inference(
         frame, 
         config.INPUT_SIZE, 
@@ -109,19 +114,25 @@ def process_frame(frame, original_shape, is_rgb=False):
         quantized=is_quantized,
         is_bgr=not is_rgb
     )
+    timings['preprocess'] = time.time() - t0
     
     # Run inference
+    t0 = time.time()
     raw_output = inference_engine.predict(preprocessed)
+    timings['inference'] = time.time() - t0
     
     # Parse output
+    t0 = time.time()
     detections = parse_yolo_output(
         raw_output,
         confidence_threshold=config.CONFIDENCE_THRESHOLD,
         nms_threshold=config.NMS_THRESHOLD,
         num_classes=len(config.CLASS_NAMES)
     )
+    timings['postprocess'] = time.time() - t0
     
     # Convert to pixel coordinates
+    t0 = time.time()
     pixel_detections = convert_to_pixel_coords(
         detections,
         scale,
@@ -129,7 +140,11 @@ def process_frame(frame, original_shape, is_rgb=False):
         original_shape,
         config.INPUT_SIZE
     )
+    timings['coords'] = time.time() - t0
+    timings['total'] = sum(timings.values())
     
+    if profile:
+        return pixel_detections, timings
     return pixel_detections
 
 
@@ -142,6 +157,8 @@ def main():
                        help="Run in headless mode (no display)")
     parser.add_argument("--model-type", type=str, choices=["onnx", "tflite"],
                        default=None, help="Model type (overrides config)")
+    parser.add_argument("--profile", action="store_true",
+                       help="Enable performance profiling (shows timing breakdown)")
     
     args = parser.parse_args()
     
@@ -199,15 +216,23 @@ def main():
         print(f"Images will be saved to: {config.LOG_IMAGES_DIR}")
     
     # Main loop
-    frame_count = 0
+    frame_count = 0           # Number of processed frames
+    frame_id = 0              # Number of captured frames (including skipped)
     consecutive_failures = 0
     max_failures = 5
+    profile_enabled = args.profile
+    timing_stats = {'preprocess': [], 'inference': [], 'postprocess': [], 'coords': [], 'total': []}
+    
     print("\nStarting inference loop... (Press 'q' to quit)")
+    if profile_enabled:
+        print("Performance profiling enabled - timing breakdown will be shown")
     
     try:
         while True:
             # Read frame
+            t_read_start = time.time()
             ret, frame = camera.read()
+            t_read = time.time() - t_read_start
             if not ret:
                 consecutive_failures += 1
                 if consecutive_failures >= max_failures:
@@ -218,10 +243,20 @@ def main():
             # Reset failure counter on successful read
             consecutive_failures = 0
             original_shape = frame.shape[:2]  # (height, width)
+
+            # Frame skipping: process only every Nth frame to reduce CPU load
+            frame_id += 1
+            if config.FRAME_SKIP > 1 and (frame_id % config.FRAME_SKIP) != 0:
+                continue
             
             # Process frame (Pi Camera outputs RGB, USB camera outputs BGR)
             is_rgb = config.USE_PI_CAMERA
-            detections = process_frame(frame, original_shape, is_rgb=is_rgb)
+            if profile_enabled:
+                detections, timings = process_frame(frame, original_shape, is_rgb=is_rgb, profile=True)
+                for key in timing_stats:
+                    timing_stats[key].append(timings.get(key, 0))
+            else:
+                detections = process_frame(frame, original_shape, is_rgb=is_rgb)
             
             # Update FPS
             fps = fps_counter.update()
@@ -275,6 +310,18 @@ def main():
             # Print FPS periodically
             if frame_count % config.FPS_DISPLAY_INTERVAL == 0:
                 print(f"FPS: {fps:.2f} | Frames processed: {frame_count}")
+                if profile_enabled and frame_count > 0:
+                    # Calculate average timings
+                    avg_timings = {key: np.mean(timing_stats[key]) for key in timing_stats}
+                    print(f"  Timing breakdown (avg over {config.FPS_DISPLAY_INTERVAL} frames):")
+                    print(f"    Preprocess: {avg_timings['preprocess']*1000:.1f}ms")
+                    print(f"    Inference:  {avg_timings['inference']*1000:.1f}ms ({avg_timings['inference']/avg_timings['total']*100:.1f}%)")
+                    print(f"    Postprocess: {avg_timings['postprocess']*1000:.1f}ms")
+                    print(f"    Coords:      {avg_timings['coords']*1000:.1f}ms")
+                    print(f"    Total:       {avg_timings['total']*1000:.1f}ms")
+                    print(f"    Camera read: {t_read*1000:.1f}ms")
+                    # Reset stats for next interval
+                    timing_stats = {key: [] for key in timing_stats}
     
     except KeyboardInterrupt:
         print("\nInterrupted by user")

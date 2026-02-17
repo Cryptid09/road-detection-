@@ -12,7 +12,7 @@ MODEL_PATH_TFLITE = os.path.join("model", "best_int8.tflite")  # Upload new INT8
 
 # Detection Parameters
 CONFIDENCE_THRESHOLD = 0.5  # Lowered for better detection
-INPUT_SIZE = 640  # Must match model training size
+INPUT_SIZE = 320  # Reduced from 640 for better FPS (model supports dynamic sizes like 320/416/640)
 NMS_THRESHOLD = 0.45  # Non-Maximum Suppression threshold
 
 # Camera Configuration
@@ -21,6 +21,11 @@ USE_PI_CAMERA = True  # Set to True on Raspberry Pi with ribbon camera
 CAMERA_WIDTH = 640
 CAMERA_HEIGHT = 480
 CAMERA_FPS = 15  # Reduced from 30 to reduce processing overhead
+
+# Frame processing configuration
+# Process every Nth frame to reduce load on CPU.
+# 1 = process every frame, 2 = process every 2nd frame, etc.
+FRAME_SKIP = 1
 
 # Performance Targets
 FPS_TARGET = 5  # Minimum FPS target
