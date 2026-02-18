@@ -50,7 +50,10 @@ def initialize_model():
             print("ERROR: ONNX Runtime not available on this system")
             print("Falling back to TFLite model...")
             if os.path.exists(config.MODEL_PATH_TFLITE):
-                inference_engine = TFLiteInferenceEngine(config.MODEL_PATH_TFLITE)
+                inference_engine = TFLiteInferenceEngine(
+                    config.MODEL_PATH_TFLITE,
+                    num_threads=config.TFLITE_NUM_THREADS
+                )
                 print("Model initialized: TFLite (fallback)")
                 return
             else:
@@ -61,7 +64,10 @@ def initialize_model():
             print(f"Warning: ONNX model not found at {model_path}")
             print("Falling back to TFLite model...")
             if os.path.exists(config.MODEL_PATH_TFLITE):
-                inference_engine = TFLiteInferenceEngine(config.MODEL_PATH_TFLITE)
+                inference_engine = TFLiteInferenceEngine(
+                    config.MODEL_PATH_TFLITE,
+                    num_threads=config.TFLITE_NUM_THREADS
+                )
                 print("Model initialized: TFLite (fallback)")
                 return
             else:
@@ -79,9 +85,24 @@ def initialize_model():
                 return
             else:
                 raise FileNotFoundError(f"Model not found: {model_path}")
-        inference_engine = TFLiteInferenceEngine(model_path)
+        inference_engine = TFLiteInferenceEngine(
+            model_path,
+            num_threads=config.TFLITE_NUM_THREADS
+        )
+        
+        # Auto-detect model input size and update config if mismatch
+        # TFLite models often have fixed input shapes (e.g., [1, 320, 320, 3] or [1, 640, 640, 3])
+        if hasattr(inference_engine, 'input_shape') and len(inference_engine.input_shape) >= 2:
+            model_input_size = inference_engine.input_shape[1]  # Usually H or W (square)
+            if model_input_size != config.INPUT_SIZE:
+                print(f"\n⚠️  WARNING: Model expects {model_input_size}x{model_input_size} input, but config.INPUT_SIZE = {config.INPUT_SIZE}")
+                print(f"   Auto-adjusting INPUT_SIZE to {model_input_size} to match model")
+                config.INPUT_SIZE = model_input_size
     
     print(f"Model initialized: {config.MODEL_TYPE}")
+    if config.MODEL_TYPE == "tflite":
+        print(f"TFLite threads: {config.TFLITE_NUM_THREADS}")
+        print(f"Using input size: {config.INPUT_SIZE}x{config.INPUT_SIZE}")
 
 
 def process_frame(frame, original_shape, is_rgb=False, profile=False):

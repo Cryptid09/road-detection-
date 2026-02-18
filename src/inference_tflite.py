@@ -24,12 +24,13 @@ class TFLiteInferenceEngine:
     TensorFlow Lite inference engine for YOLOv8 (INT8 quantized)
     """
     
-    def __init__(self, model_path: str):
+    def __init__(self, model_path: str, num_threads: Optional[int] = None):
         """
         Initialize TFLite inference engine
         
         Args:
             model_path: Path to TFLite model file
+            num_threads: Number of CPU threads for TFLite inference (device-dependent)
         """
         if not TFLITE_AVAILABLE:
             raise RuntimeError(
@@ -43,7 +44,12 @@ class TFLiteInferenceEngine:
             raise FileNotFoundError(f"TFLite model not found: {model_path}")
         
         # Load TFLite model
-        self.interpreter = tflite.Interpreter(model_path=model_path)
+        # NOTE: Both tflite-runtime and tensorflow.lite support num_threads.
+        interpreter_kwargs = {"model_path": model_path}
+        if num_threads is not None and int(num_threads) > 0:
+            interpreter_kwargs["num_threads"] = int(num_threads)
+
+        self.interpreter = tflite.Interpreter(**interpreter_kwargs)
         self.interpreter.allocate_tensors()
         
         # Get input/output details
